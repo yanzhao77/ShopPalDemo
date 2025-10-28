@@ -45,13 +45,71 @@ $env:ZHIPU_API_KEY="your_zhipu_api_key_here"
 
 ## 使用本地模型 vs. 智谱云 Embedding
 
-- 若要使用仓库中的本地 ONNX 模型，确保 `application.yml` 中将 embedding 配置指向本地实现（OnnxEmbeddingService），并且机器上有合适的 ONNX 运行环境与依赖（CPU/GPU）。
-- 若使用智谱云 Embedding/LLM，请在 `application.yml` 中配置 `zhipu` 相关项并设置环境变量 `ZHIPU_API_KEY`。
+配置示例 (`application.yml`):
+```yaml
+server:
+  port: 8080  # 服务端口
+
+lucene:
+  index-path: ${user.home}/lucene_vector_index  # 向量库存储路径
+
+embedding:
+  provider: bgeSmallZhEmbeddingConfig  # 使用本地 ONNX 模型（bgeSmallZhEmbeddingConfig）或智谱云服务（djlEmbeddingConfig）
+
+zhipu:
+  model: glm-4-flash  # 智谱 AI 模型，可选：glm-4、glm-4-flash（更快）等
+  url: https://open.bigmodel.cn/api/paas/v4
+  api-key: ${ZHIPU_API_KEY}  # 从环境变量读取，不要硬编码
+```
+
+- 若要使用仓库中的本地 ONNX 模型，将 `embedding.provider` 设为 `bgeSmallZhEmbeddingConfig`，并确保机器上有合适的 ONNX 运行环境与依赖（CPU/GPU）。
+- 若使用智谱云 Embedding/LLM，将 `embedding.provider` 设为 `djlEmbeddingConfig`，并在环境变量中设置 `ZHIPU_API_KEY`。
+
+## API 调用示例
+
+服务启动后，可以通过以下方式调用聊天接口：
+
+```bash
+# PowerShell 示例
+$question = '如何申请退款？'
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/api/chat' -Body $question -ContentType 'text/plain;charset=utf-8'
+
+# curl 示例（Windows CMD）
+curl -X POST "http://localhost:8080/api/chat" ^
+  -H "Content-Type: text/plain;charset=utf-8" ^
+  -d "如何申请退款？"
+
+# curl 示例（Linux/macOS）
+curl -X POST "http://localhost:8080/api/chat" \
+  -H "Content-Type: text/plain;charset=utf-8" \
+  -d "如何申请退款？"
+```
+
+示例响应：
+```
+根据参考资料，我来为您解答退款相关问题。如果您需要申请退款，可以按以下步骤操作：...
+（注：实际响应内容取决于向量库中的参考资料）
+```
 
 ## 知识库加载与测试
 
-- 本项目提供 `FaqInitializer`，会从指定目录加载 `.txt` / `.md` 文档，自动分块并调用 Embedding 服务把向量写入 `LuceneVectorStore`。启动时可触发初始化流程（请查看 `FaqInitializer` 的注释与配置）。
-- 测试流程：准备若干文本文档，启动应用后通过 `ChatController` 提交一个 `ChatRequest`，服务会基于向量检索返回相关文档并调用 LLM 生成回答。
+项目提供了示例知识库文件用于快速测试：
+
+- 位置：`src/main/resources/faq/shopping_faq.md`
+- 内容：包含常见的电商场景问答，如退货退款流程、订单修改、商品质量问题处理等
+- 格式：使用 Markdown 格式，按主题组织，每组包含多个 Q&A 对
+
+测试流程：
+1. 确保 `FaqInitializer` 配置的文档目录指向 `src/main/resources/faq`
+2. 启动应用，`FaqInitializer` 会自动加载并处理示例知识库
+3. 通过上述 API 发送问题，如"如何申请退款？"、"退款多久能到账？"等
+4. 系统会基于向量检索返回最相关的参考文档，并让 LLM 生成回答
+5. 若检索不到相关文档，系统会返回："请稍等，我帮您转接人工客服。"
+
+您也可以：
+- 在示例知识库中添加更多 Q&A
+- 创建新的知识库文件（.txt 或 .md）
+- 调整 `FaqInitializer` 的分块策略和向量检索参数
 
 ## 注意事项与扩展建议
 
