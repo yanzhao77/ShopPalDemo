@@ -1,0 +1,13 @@
+server:
+  port: 8080
+
+lucene:
+  index-path: ${user.home}/lucene_vector_index
+
+embedding:
+  provider: djlEmbeddingConfig  # 可选值: bgeSmallZhEmbeddingConfig, djlEmbeddingConfig
+
+zhipu:
+  model: glm-4-flash
+  url: https://open.bigmodel.cn/api/paas/v4
+  api-key: 0d
