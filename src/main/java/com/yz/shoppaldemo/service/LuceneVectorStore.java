@@ -79,8 +79,8 @@ public class LuceneVectorStore {
         doc.add(new StoredField(ANSWER_FIELD, answer));
 
         // 关键：添加 HNSW 向量字段（Lucene 9+）
-        // 关键：使用 KnnVectorField 存储向量，支持余弦相似度搜索
-        doc.add(new KnnVectorField(VECTOR_FIELD, embedding, VectorSimilarityFunction.COSINE));
+        // 关键：使用 KnnFloatVectorField 存储向量，支持余弦相似度搜索
+        doc.add(new KnnFloatVectorField(VECTOR_FIELD, embedding, VectorSimilarityFunction.COSINE));
 
         indexWriter.addDocument(doc);
         indexWriter.commit(); // 立即提交（生产环境可批量）
