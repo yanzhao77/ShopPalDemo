@@ -1,4 +1,3 @@
-// src/test/java/com/yz/shoppaldemo/service/DjlOnnxEmbeddingServiceTest.java
 package com.yz.shoppaldemo;
 
 import com.yz.shoppaldemo.config.Embedding;
