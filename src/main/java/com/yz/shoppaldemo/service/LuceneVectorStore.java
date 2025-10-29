@@ -29,27 +29,28 @@ public class LuceneVectorStore {
     private static final String QUESTION_FIELD = "question";
     private static final String ANSWER_FIELD = "answer";
 
-    private Directory directory;
-    private IndexWriter indexWriter;
-    private IndexSearcher indexSearcher;
-    private IndexReader indexReader;
+    private Directory directory;      // Lucene 索引目录
+    private IndexWriter indexWriter;  // 索引写入器
+    private IndexSearcher indexSearcher; // 索引搜索器
+    private IndexReader indexReader;   // 索引读取器
 
     @Value("${lucene.index-path:${java.io.tmpdir}/lucene_vector_index}")
     private String indexPath;
 
     @PostConstruct
     public void init() throws IOException {
+        // 创建索引目录
         Path path = Paths.get(indexPath);
         Files.createDirectories(path);
         directory = FSDirectory.open(path);
         log.info("Lucene 向量索引路径: {}", path.toAbsolutePath());
 
-        // 创建或打开索引
+        // 创建或打开索引 配置并创建索引写入器
         IndexWriterConfig config = new IndexWriterConfig(new StandardAnalyzer());
         config.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
         indexWriter = new IndexWriter(directory, config);
 
-        // 初始化 searcher
+        // 初始化 searcher搜索器
         refreshSearcher();
 
         log.info("Lucene HNSW 向量存储初始化完成");
@@ -78,6 +79,7 @@ public class LuceneVectorStore {
         doc.add(new StoredField(ANSWER_FIELD, answer));
 
         // 关键：添加 HNSW 向量字段（Lucene 9+）
+        // 关键：使用 KnnVectorField 存储向量，支持余弦相似度搜索
         doc.add(new KnnVectorField(VECTOR_FIELD, embedding, VectorSimilarityFunction.COSINE));
 
         indexWriter.addDocument(doc);
