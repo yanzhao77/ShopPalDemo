@@ -19,21 +19,62 @@ public class FaqInitializer {
 
     @PostConstruct
     public void initSampleFaqs() {
-        String[][] faqs = {
-                {"订单多久能发货？", "我们通常在24小时内发货，节假日顺延。"},
-                {"支持7天无理由退货吗？", "支持！商品需保持完好、未使用、包装齐全。"},
-                {"优惠券怎么用？", "下单时在支付页面选择“使用优惠券”即可自动抵扣。"},
-                {"蓝牙耳机有降噪功能吗？", "Pro 版支持主动降噪，标准版仅支持物理隔音。"},
-                {"支付失败怎么办？", "请检查网络或更换支付方式，订单保留30分钟。"}
-        };
         try {
-            for (String[] faq : faqs) {
-                String question = faq[0];
-                String answer = faq[1];
-                float[] embedding = embeddingConfig.embed(question);
-                vectorStore.addFaq(UUID.randomUUID().toString(), question, answer, embedding);
+            // 读取 shopping_faq.md 文件
+            var resource = getClass().getClassLoader().getResourceAsStream("faq/shopping_faq.md");
+            if (resource == null) {
+                log.warn("未找到 faq/shopping_faq.md 文件，跳过 FAQ 初始化");
+                return;
             }
-            log.info("示例 FAQ 已加载到 Lucene 向量索引");
+
+            String content = new String(resource.readAllBytes());
+            String[] sections = content.split("\n## "); // 按章节分割
+
+            int count = 0;
+            for (String section : sections) {
+                if (section.trim().isEmpty()) continue;
+
+                // 提取所有问答对
+                var lines = section.split("\n");
+                String currentQuestion = null;
+                StringBuilder currentAnswer = new StringBuilder();
+
+                for (String line : lines) {
+                    if (line.startsWith("Q: ")) {
+                        // 如果已有待处理的问答对，先保存
+                        if (currentQuestion != null && currentAnswer.length() > 0) {
+                            float[] embedding = embeddingConfig.embed(currentQuestion);
+                            vectorStore.addFaq(
+                                UUID.randomUUID().toString(),
+                                currentQuestion,
+                                currentAnswer.toString().trim(),
+                                embedding
+                            );
+                            count++;
+                            currentAnswer.setLength(0);
+                        }
+                        // 开始新的问答对
+                        currentQuestion = line.substring(3).trim();
+                    } else if (line.startsWith("A: ") && currentQuestion != null) {
+                        // 添加答案内容
+                        currentAnswer.append(line.substring(3).trim());
+                    }
+                }
+
+                // 处理最后一个问答对
+                if (currentQuestion != null && currentAnswer.length() > 0) {
+                    float[] embedding = embeddingConfig.embed(currentQuestion);
+                    vectorStore.addFaq(
+                        UUID.randomUUID().toString(),
+                        currentQuestion,
+                        currentAnswer.toString().trim(),
+                        embedding
+                    );
+                    count++;
+                }
+            }
+            log.info("已从 shopping_faq.md 加载 {} 个 FAQ 到 Lucene 向量索引", count);
+
         } catch (Exception e) {
             log.error("初始化 FAQ 失败", e);
         }
