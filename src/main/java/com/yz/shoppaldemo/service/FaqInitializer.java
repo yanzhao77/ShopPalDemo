@@ -4,6 +4,7 @@ import com.yz.shoppaldemo.config.Embedding;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -16,12 +17,14 @@ public class FaqInitializer {
     @Autowired
     private Embedding embeddingConfig;
 
+    @Value("${faq:faq/shopping_faq.md}")
+    private String indexPath;
 
     @PostConstruct
     public void initSampleFaqs() {
         try {
             // 读取 shopping_faq.md 文件
-            var resource = getClass().getClassLoader().getResourceAsStream("faq/shopping_faq.md");
+            var resource = getClass().getClassLoader().getResourceAsStream(indexPath);
             if (resource == null) {
                 log.warn("未找到 faq/shopping_faq.md 文件，跳过 FAQ 初始化");
                 return;
@@ -45,10 +48,10 @@ public class FaqInitializer {
                         if (currentQuestion != null && currentAnswer.length() > 0) {
                             float[] embedding = embeddingConfig.embed(currentQuestion);
                             vectorStore.addFaq(
-                                UUID.randomUUID().toString(),
-                                currentQuestion,
-                                currentAnswer.toString().trim(),
-                                embedding
+                                    UUID.randomUUID().toString(),
+                                    currentQuestion,
+                                    currentAnswer.toString().trim(),
+                                    embedding
                             );
                             count++;
                             currentAnswer.setLength(0);
@@ -65,15 +68,15 @@ public class FaqInitializer {
                 if (currentQuestion != null && currentAnswer.length() > 0) {
                     float[] embedding = embeddingConfig.embed(currentQuestion);
                     vectorStore.addFaq(
-                        UUID.randomUUID().toString(),
-                        currentQuestion,
-                        currentAnswer.toString().trim(),
-                        embedding
+                            UUID.randomUUID().toString(),
+                            currentQuestion,
+                            currentAnswer.toString().trim(),
+                            embedding
                     );
                     count++;
                 }
             }
-            log.info("已从 shopping_faq.md 加载 {} 个 FAQ 到 Lucene 向量索引", count);
+            log.info("已从 " + indexPath + " 加载 {} 个 FAQ 到 Lucene 向量索引", count);
 
         } catch (Exception e) {
             log.error("初始化 FAQ 失败", e);

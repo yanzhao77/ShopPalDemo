@@ -4,6 +4,7 @@ server:
 lucene:
   index-path: ${user.home}/lucene_vector_index
 
+faq: faq/shopping_faq.md
 embedding:
   provider: djlEmbeddingConfig  # 可选值: bgeSmallZhEmbeddingConfig, djlEmbeddingConfig
 
